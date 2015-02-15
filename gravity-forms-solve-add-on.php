@@ -88,6 +88,7 @@ class GFSolve extends GFAddOn {
 		}
 
 		add_action( 'gform_field_advanced_settings', array( $this, 'gform_field_advanced_settings' ), 10, 2 );
+		add_action( 'gform_editor_js', array( $this, 'editor_script' ) );
 
 	}
 
@@ -179,33 +180,160 @@ class GFSolve extends GFAddOn {
 
 	}
 
-	public function gform_field_advanced_settings( $position, $form_id ) {
+	public function get_contact_fields() {
 
-		if ( $position == 25 ) {
-
-			// $categories = $solveService->getCategories( $solveService::ITEM_CONTACTS );
-			// echo'<pre>' . print_r($categories, true) . '</pre>';
-
-			// if ( !isset( $categories->categories ) ) {
-			// 	return;
-			// }
-			?>
-			<li class="admin_label_setting field_setting">
-				<label for="solve_field">
-					<?php _e( 'Solve field', $this->_slug ); ?>
-					<?php gform_tooltip( 'form_field_solve_field' ); ?>
-				</label>
-				<select name="solve_field" id="solve_field">
-					<?php
-						// foreach ( $categories->categories->category as $c ) {
-						// 	printf( '<option value="%s">%s</option>', $c->id, $c->name );
-						// }
-					?>
-				</select>
-			</li>
-			<?php
+		$fields = $this->solveService->getAllItems( 'contacts/fields' );
+		if ( isset( $fields->status ) && $fields->status == 'success' ) {
+			return $fields->fields->field;
 		}
 
+		throw new Exception( 'Failed to retrieve contact fields from Solve' );
+
+	}
+
+	public function gform_field_advanced_settings( $position, $form_id ) {
+
+		if ( $position == 550 ) {
+
+			try {
+
+				$fields = $this->get_contact_fields();
+				?>
+				<li class="solve_field_setting field_setting" style="display: none;">
+					<label for="field_solve">
+						<?php _e( 'Solve field', $this->_slug ); ?>
+						<?php gform_tooltip( 'form_field_solve_field' ); ?>
+					</label>
+					<select name="field_solve" id="field_solve">
+						<option value="">-- Select Contact Field --</option>
+						<?php
+							foreach ( $fields as $f ) {
+								$type = ( false !== strpos( $f->name, 'custom' ) ) ? $f->type : $f->name;
+								printf( '<option value="%s" data-type="%s">%s</option>', $f->name, $type, $f->label );
+							}
+						?>
+						<option value="category" data-type="category">Category</option>
+					</select>
+				</li>
+				<?php
+
+			} catch (Exception $e) {
+				echo $e->getMessage();
+			}
+
+		}
+
+	}
+
+	public function editor_script() {
+		?>
+		<script type="text/javascript">
+
+			jQuery(document).ready(function($) {
+
+				if (typeof form.gfsolve !== 'undefined' || form.gfsolve.isEnabled) {
+					// Adding setting to fields of type "text"
+					$.each(fieldSettings, function(index, value) {
+						fieldSettings[index] += ',.solve_field_setting';
+					});
+				}
+
+			});
+
+			// gform.hooks['action']['gform_post_load_field_settings'] = function (args) {
+			// 	console.log('test');
+			// 	console.log(args);
+			// };
+
+			var filter_solve_options = function (args) {
+				var $ 			= jQuery,
+					field 		= args[0],
+					form 		= args[1],
+					$options 	= $('#field_' + field.id + ' #field_solve option'),
+					supported;
+
+				$options.show();
+
+				switch (field.type) {
+					case 'text':
+						supported = ['jobtitle', 'company', 'businessphoneextension', 'text'];
+						break;
+					case 'textarea':
+						supported = ['businessaddress', 'homeaddress', 'background', 'textarea'];
+						break;
+					case 'select':
+						supported = ['jobtitle', 'company', 'assignedto', 'relatedto', 'category', 'select'];
+						break;
+					case 'multiselect':
+						supported = ['category'];
+						break;
+					case 'number':
+						supported = ['businessphonedirect', 'cellularphone', 'homephone', 'businessphonemain', 'businessphoneextension', 'businessfax', 'number', 'currency'];
+						break;
+					case 'checkbox':
+						supported = ['jobtitle', 'company', 'assignedto', 'category'];
+						break;
+					case 'radio':
+						supported = ['jobtitle', 'company', 'assignedto', 'archive', 'flagged', 'category', 'text', 'number', 'currency'];
+						break;
+					case 'hidden':
+						supported = ['firstname', 'lastname', 'jobtitle', 'company', 'businessemail', 'businessphonedirect', 'cellularphone', 'personalemail', 'otheremail', 'homephone', 'assignedto', 'website', 'businessphonemain', 'businessphoneextension', 'businessfax', 'businessaddress', 'homeaddress', 'relatedto', 'archive', 'flagged', 'background', 'category', 'url', 'text', 'textarea', 'email', 'number', 'phonenumber', 'currency'];
+						break;
+					case 'name':
+						// Automatically setup
+						break;
+					case 'date':
+						supported = ['date'];
+						break;
+					case 'phone':
+						supported = ['businessphonedirect', 'cellularphone', 'homephone', 'businessphonemain', 'businessfax', 'phonenumber'];
+						break;
+					case 'address':
+						supported = ['businessaddress', 'homeaddress', 'textarea'];
+						break;
+					case 'website':
+						supported = ['website', 'url'];
+						break;
+					case 'email':
+						supported = ['businessemail', 'personalemail', 'otheremail', 'email'];
+						break;
+					default:
+						break;
+				}
+
+				// console.log(supported);
+				// console.log($options);
+
+				// Remove unsupported contact fields
+				$.each($options, function () {
+
+					// skip if blank placeholder option
+					if ($(this).val() === '')
+						return;
+
+					if ($.inArray($(this).data('type'), supported) === -1) {
+						// $(this, $options).remove();
+						// $('#field_' + field.id + ' .solve_field_setting').find('[data-type="' + $(this).data('type') + '"]').hide();
+						$(this).hide();
+					}
+				});
+
+				// console.log('field', field);
+				// console.log('form', form);
+				// console.log('options', $options);
+			};
+
+			gform.addAction('gform_post_load_field_settings', 'filter_solve_options', 10);
+
+			jQuery(document).bind('gform_load_field_settings', function (event, field, form) {
+
+				// console.log('event', event);
+				// console.log('field', field);
+				// console.log('form', form);
+			});
+
+		</script>
+		<?php
 	}
 
 }
