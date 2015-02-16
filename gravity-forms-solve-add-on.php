@@ -446,8 +446,10 @@ class GFSolve extends GFAddOn {
 		if ( ! isset( $form['gfsolve']['isEnabled'] ) || ! $form['gfsolve']['isEnabled'] )
 			return;
 
-		$task = new \HM\Backdrop\Task( array( $this, 'after_submission' ), $entry, $form );
-		$task->schedule();
+		$this->after_submission( $entry, $form );
+
+		// $task = new \HM\Backdrop\Task( array( $this, 'after_submission' ), $entry, $form );
+		// $task->schedule();
 
 	}
 
@@ -455,20 +457,26 @@ class GFSolve extends GFAddOn {
 
 		$contact_data 	= array();
 		$form_settings 	= $this->get_form_settings( $form );
-		$filtermode 	= isset( $form_settings['filtermode'] ) ? $form_settings['filtermode'] : 'byemail';
+		$filtermode 	= isset( $form_settings['filtermode'] ) ? $form_settings['filtermode'] : false;
+		$filterfield 	= isset( $form_settings['filterfield'] ) ? $form_settings['filterfield'] : false;
 
+		// Populate $contact_data array based on solve field selections
 		foreach ( $form['fields'] as $field ) {
 
-			if ( $solve_field = $field->solve_field_setting ) {
-				$contact_data[$solve_field] = $entry[$field->id];
+			if ( $field->type == 'name' ) {
+				$contact_data['firstname'] 	= isset( $entry[$field->id . '.3'] ) ? $entry[$field->id . '.3'] : '';
+				$contact_data['lastname']	= isset( $entry[$field->id . '.6'] ) ? $entry[$field->id . '.6'] : '';
+			} else if ( $solve_field = $field->solve_field_setting ) {
+				if ( $solve_field == 'category' ) {
+					$contact_data['categories'] = array(
+						'add' => array( 'category' => array( (int) $entry[$field->id] ) )
+					);
+				} else {
+					$contact_data[$solve_field] = $entry[$field->id];
+				}
 			}
 
 		}
-
-		$contacts = $this->solveService->searchContacts( array(
-			'filtermode' => $filtermode,
-			'filtervalue' => ''
-		) );
 
 		// Check if $contact_data is empty
 		if ( empty( $contact_data ) ) {
@@ -476,9 +484,30 @@ class GFSolve extends GFAddOn {
 			return false;
 		}
 
-		$contact 		= $this->solveService->addContact( $contact_data );
-		$contact_name 	= (string) $contact->item->name;
-		$contact_id 	= (integer) $contact->item->id;
+		// Search existing Solve contacts
+		if ( $filtermode && $filterfield) {
+			$contacts = $this->solveService->searchContacts( array(
+				'filtermode' => $filtermode,
+				'filtervalue' => $entry[$filterfield]
+			) );
+		}
+
+		// wp_die(
+		// 	"filtermode: $filtermode<br>filtervalue: $filterfield<br>".
+		// 	'<h2>Contacts:</h2><pre>' . print_r($contacts, true) . '</pre>' .
+		// 	'<h2>Entry Object:</h2><pre>' . print_r($entry, true) . '</pre>' .
+		// 	'<h2>contact_data:<h2><pre>' . print_r($contact_data, true) . '</pre>'
+		// );
+
+		if ( isset( $contacts ) && (integer) $contacts->count > 0 ) {
+			$contact_id 	= (integer)current($contacts->children())->id;
+			$contact_name 	= (string)current($contacts->children())->name;
+			$contact 		= $this->solveService->editContact($contact_id, $contact_data);
+		} else {
+			$contact 		= $this->solveService->addContact( $contact_data );
+			$contact_name 	= (string) $contact->item->name;
+			$contact_id 	= (integer) $contact->item->id;
+		}
 
 		if ( isset( $contact->errors ) ) {
 			wp_mail( 'duane@signpost.co.za', 'Error while adding contact to Solve', 'Error: ' . $contact->errors->asXml() );
