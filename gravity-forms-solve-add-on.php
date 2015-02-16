@@ -188,6 +188,22 @@ class GFSolve extends GFAddOn {
 								'name' 	=> 'isEnabled'
 							)
 						)
+					),
+					array(
+						'name'		=> 'filtermode',
+						'tooltip' 	=> __( 'Solve contacts are searched when a form is submitted. The contact is updated if found and created if not found.', $this->_slug ),
+						'label' 	=> __( 'Search Contacts by', $this->_slug ),
+						'type' 		=> 'select',
+						'choices'	=> array(
+							array(
+								'label' => __( 'Phone (any phone field)', $this->_slug ),
+								'name' 	=> 'byphone'
+							),
+							array(
+								'label' => __( 'Email (any email field)', $this->_slug ),
+								'name' 	=> 'byemail'
+							)
+						)
 					)
 				)
 			)
@@ -370,6 +386,8 @@ class GFSolve extends GFAddOn {
 
 	public function after_submission( $entry, $form ) {
 
+		// Check if solve integration is enabled
+
 		$contact_data = array();
 
 		foreach ( $form['fields'] as $field ) {
@@ -380,7 +398,7 @@ class GFSolve extends GFAddOn {
 
 		}
 
-		wp_mail( 'duane@signpost.co.za', 'Contact data', '<pre>' . print_r($contact_data, true) . '</pre>' );
+		// Check if $contact_data is empty
 
 		$contact 		= $this->solveService->addContact( $contact_data );
 		$contact_name 	= (string) $contact->item->name;
