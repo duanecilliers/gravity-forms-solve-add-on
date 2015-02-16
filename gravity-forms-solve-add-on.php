@@ -75,10 +75,10 @@ class GFSolve extends GFAddOn {
 
 		parent::__construct();
 
-		$this->plugin_settings = $this->get_plugin_settings();
+		$this->plugin_settings 	= $this->get_plugin_settings();
 
-		$this->user 	= isset( $this->plugin_settings['solve_user'] ) ? $this->plugin_settings['solve_user'] : false;
-		$this->token 	= isset( $this->plugin_settings['solve_token'] ) ? $this->plugin_settings['solve_token'] : false;
+		$this->user 		= isset( $this->plugin_settings['solve_user'] ) ? $this->plugin_settings['solve_user'] : false;
+		$this->token 		= isset( $this->plugin_settings['solve_token'] ) ? $this->plugin_settings['solve_token'] : false;
 
 		if ( ! $this->user && ! $this->token ) {
 			throw new Exception( sprintf( 'Solve user and token are required! <a href="%s">Update your Solve credentials</a>.', $this->get_plugin_settings_url() ) );
@@ -168,9 +168,55 @@ class GFSolve extends GFAddOn {
 				)
 			)
 		);
+
 	}
 
 	public function form_settings_fields( $form ) {
+
+		$filterfields 	= array();
+		$form_settings 	= $this->get_form_settings( $form );
+		$filtermode 	= isset( $form_settings['filtermode'] ) ? $form_settings['filtermode'] : 'byemail';
+
+
+		// @TODO Bug: filterfield form setting isn’t updated when filtered changes
+		// wp_die( '<pre>' . print_r($form_settings, true) . '</pre>' );
+
+		foreach ( $form['fields'] as $field ) {
+
+			if ( ! isset( $filtermode ) ) { // get first email field and push onto $filterfields array
+
+				if ( $field->type == 'email' ) {
+					$filterfields[] = $field;
+					break;
+				}
+
+			} else if ( $filtermode == 'byemail' ) { // push all email fields onto $filterfields array
+
+				if ( $field->type == 'email' ) {
+					$filterfields[] = $field;
+				}
+
+			} else if ( $filtermode == 'byphone' ) {
+
+				if ( $field->type == 'text' || $field->type == 'number' || $field->type == 'hidden' || $field->type == 'phone' ) {
+					$filterfields[] = $field;
+				}
+
+			}
+
+		}
+
+		// wp_die( '<pre>' . print_r($filterfields, true) . '</pre>' );
+
+		$filterfield_choices = array();
+		foreach ( $filterfields as $f ) {
+			$filterfield_choices[] = array(
+				'label' => $f->label,
+				'value' => $f->id
+			);
+		}
+
+		// wp_die( '<pre>' . print_r($filterfield_choices, true) . '</pre>' );
 
 		return array(
 			array(
@@ -180,7 +226,7 @@ class GFSolve extends GFAddOn {
 						'name'		=> 'enableSolve',
 						'tooltip' 	=> __( 'Activate to feed entries from this form to Solve.', $this->_slug ),
 						'label' 	=> __( 'Solve integration', $this->_slug ),
-						'onclick' 	=> "jQuery(this).parents('form').submit();",
+						'onclick' 	=> "jQuery(this).parents('form').find('#gform-settings-save').trigger('click');",
 						'type' 		=> 'checkbox',
 						'choices'	=> array(
 							array(
@@ -194,16 +240,25 @@ class GFSolve extends GFAddOn {
 						'tooltip' 	=> __( 'Solve contacts are searched when a form is submitted. The contact is updated if found and created if not found.', $this->_slug ),
 						'label' 	=> __( 'Search Contacts by', $this->_slug ),
 						'type' 		=> 'select',
+						'onchange' 	=> "jQuery(this).parents('form').find('#gform-settings-save').trigger('click');",
 						'choices'	=> array(
 							array(
-								'label' => __( 'Phone (any phone field)', $this->_slug ),
-								'name' 	=> 'byphone'
+								'label' => __( 'Email (any email field)', $this->_slug ),
+								'value' 	=> 'byemail'
 							),
 							array(
-								'label' => __( 'Email (any email field)', $this->_slug ),
-								'name' 	=> 'byemail'
+								'label' => __( 'Phone (any phone field)', $this->_slug ),
+								'value' 	=> 'byphone'
 							)
 						)
+					),
+					array(
+						'name'		=> 'filterfield',
+						'tooltip' 	=> __( 'Select a field to search Solve contacts by.', $this->_slug ),
+						'label' 	=> __( 'Search by field', $this->_slug ),
+						'type' 		=> 'select',
+						// 'onchange' 	=> "jQuery(this).parents('form').submit();",
+						'choices'	=> $filterfield_choices
 					)
 				)
 			)
@@ -264,6 +319,7 @@ class GFSolve extends GFAddOn {
 	}
 
 	public function editor_script() {
+
 		?>
 		<script type="text/javascript">
 
@@ -278,6 +334,12 @@ class GFSolve extends GFAddOn {
 				}
 
 			});
+
+			function SetFormProperty (name, value) {
+				if (value) {
+					form[name] = value;
+				}
+			}
 
 			// gform.hooks['action']['gform_post_load_field_settings'] = function (args) {
 			// 	console.log('test');
@@ -375,6 +437,7 @@ class GFSolve extends GFAddOn {
 
 		</script>
 		<?php
+
 	}
 
 	public function after_submission_init( $entry, $form ) {
@@ -390,7 +453,9 @@ class GFSolve extends GFAddOn {
 
 	public function after_submission( $entry, $form ) {
 
-		$contact_data = array();
+		$contact_data 	= array();
+		$form_settings 	= $this->get_form_settings( $form );
+		$filtermode 	= isset( $form_settings['filtermode'] ) ? $form_settings['filtermode'] : 'byemail';
 
 		foreach ( $form['fields'] as $field ) {
 
@@ -399,6 +464,11 @@ class GFSolve extends GFAddOn {
 			}
 
 		}
+
+		$contacts = $this->solveService->searchContacts( array(
+			'filtermode' => $filtermode,
+			'filtervalue' => ''
+		) );
 
 		// Check if $contact_data is empty
 		if ( empty( $contact_data ) ) {
