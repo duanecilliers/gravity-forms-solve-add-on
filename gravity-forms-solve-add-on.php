@@ -379,14 +379,16 @@ class GFSolve extends GFAddOn {
 
 	public function after_submission_init( $entry, $form ) {
 
+		// Check if solve integration is enabled
+		if ( ! isset( $form['gfsolve']['isEnabled'] ) || ! $form['gfsolve']['isEnabled'] )
+			return;
+
 		$task = new \HM\Backdrop\Task( array( $this, 'after_submission' ), $entry, $form );
 		$task->schedule();
 
 	}
 
 	public function after_submission( $entry, $form ) {
-
-		// Check if solve integration is enabled
 
 		$contact_data = array();
 
@@ -399,6 +401,10 @@ class GFSolve extends GFAddOn {
 		}
 
 		// Check if $contact_data is empty
+		if ( empty( $contact_data ) ) {
+			wp_mail( 'duane@signpost.co.za', sprintf( 'Entry %s from form %s not posted to solve', $entry['id'], $form['id'] ), sprintf( 'Entry %s from form %s not posted to solve, no field data found.', $entry['id'], $form['id'] ) );
+			return false;
+		}
 
 		$contact 		= $this->solveService->addContact( $contact_data );
 		$contact_name 	= (string) $contact->item->name;
