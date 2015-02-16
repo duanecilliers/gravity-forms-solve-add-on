@@ -29,6 +29,13 @@ GFForms::include_addon_framework();
 // Require Solve PHP Service Gateway.
 require dirname( __FILE__ ) . '/includes/solve360Service.php';
 
+/**
+ * Required Backdrop. Used for running one-off tasks in the background.
+ *
+ * @link https://github.com/humanmade/Backdrop Backdrop
+ */
+require dirname( __FILE__ ) . '/includes/backdrop/hm-backdrop.php';
+
 class GFSolve extends GFAddOn {
 
 	// The version number is used for example during add-on upgrades.
@@ -89,6 +96,14 @@ class GFSolve extends GFAddOn {
 
 		add_action( 'gform_field_advanced_settings', array( $this, 'gform_field_advanced_settings' ), 10, 2 );
 		add_action( 'gform_editor_js', array( $this, 'editor_script' ) );
+		add_action( 'gform_tooltips', array( $this, 'form_tooltips' ) );
+
+	}
+
+	public function init_frontend() {
+
+		parent::init_frontend();
+		add_action( 'gform_after_submission', array( $this, 'after_submission_init' ), 10, 2 );
 
 	}
 
@@ -199,12 +214,12 @@ class GFSolve extends GFAddOn {
 
 				$fields = $this->get_contact_fields();
 				?>
-				<li class="solve_field_setting field_setting" style="display: none;">
+				<li class="solve_field_setting field_setting">
 					<label for="field_solve">
 						<?php _e( 'Solve field', $this->_slug ); ?>
-						<?php gform_tooltip( 'form_field_solve_field' ); ?>
+						<?php gform_tooltip( 'field_solve' ); ?>
 					</label>
-					<select name="field_solve" id="field_solve">
+					<select name="field_solve" id="field_solve" onchange="SetFieldProperty('solve_field_setting', this.value);">
 						<option value="">-- Select Contact Field --</option>
 						<?php
 							foreach ( $fields as $f ) {
@@ -225,6 +240,13 @@ class GFSolve extends GFAddOn {
 
 	}
 
+	public function form_tooltips( $tooltips ) {
+
+		$tooltips['field_solve'] = '<strong>Solve Contact:</strong> Choose the field in Solve that this field will populate';
+		return $tooltips;
+
+	}
+
 	public function editor_script() {
 		?>
 		<script type="text/javascript">
@@ -233,8 +255,9 @@ class GFSolve extends GFAddOn {
 
 				if (typeof form.gfsolve !== 'undefined' || form.gfsolve.isEnabled) {
 					// Adding setting to fields of type "text"
+					console.log('fieldSettings', fieldSettings);
 					$.each(fieldSettings, function(index, value) {
-						fieldSettings[index] += ',.solve_field_setting';
+						fieldSettings[index] += ', .solve_field_setting';
 					});
 				}
 
@@ -327,13 +350,50 @@ class GFSolve extends GFAddOn {
 
 			jQuery(document).bind('gform_load_field_settings', function (event, field, form) {
 
+				jQuery('#field_solve').val(field['solve_field_setting']);
+
 				// console.log('event', event);
-				// console.log('field', field);
-				// console.log('form', form);
+				console.log('field', field);
+				console.log('form', form);
 			});
 
 		</script>
 		<?php
+	}
+
+	public function after_submission_init( $entry, $form ) {
+
+		$task = new \HM\Backdrop\Task( array( $this, 'after_submission' ), $entry, $form );
+		$task->schedule();
+
+	}
+
+	public function after_submission( $entry, $form ) {
+
+		$contact_data = array();
+
+		foreach ( $form['fields'] as $field ) {
+
+			if ( $solve_field = $field->solve_field_setting ) {
+				$contact_data[$solve_field] = $entry[$field->id];
+			}
+
+		}
+
+		wp_mail( 'duane@signpost.co.za', 'Contact data', '<pre>' . print_r($contact_data, true) . '</pre>' );
+
+		$contact 		= $this->solveService->addContact( $contact_data );
+		$contact_name 	= (string) $contact->item->name;
+		$contact_id 	= (integer) $contact->item->id;
+
+		if ( isset( $contact->errors ) ) {
+			wp_mail( 'duane@signpost.co.za', 'Error while adding contact to Solve', 'Error: ' . $contact->errors->asXml() );
+		} else {
+			wp_mail( 'duane@signpost.co.za', 'Contact posted to Solve', "Contact $contact_name https://secure.solve360.com/contact/$contact_id was posted to Solve." );
+		}
+
+		// wp_mail( 'duane@signpost.co.za', 'Testing backdrop', '<h1>Entry</h1><pre>' . print_r($entry, true) . '</pre><br>' . '<h1>Form</h1><pre>' . print_r($form, true) . '</pre>' );
+
 	}
 
 }
