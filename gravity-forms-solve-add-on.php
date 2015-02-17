@@ -266,54 +266,27 @@ class GFSolve extends GFAddOn {
 
 	}
 
-	public function get_contact_fields() {
-
-		$fields = $this->solveService->getAllItems( 'contacts/fields' );
-		if ( isset( $fields->status ) && $fields->status == 'success' ) {
-			return $fields->fields->field;
-		}
-
-		throw new Exception( 'Failed to retrieve contact fields from Solve' );
-
-	}
-
 	public function gform_field_advanced_settings( $position, $form_id ) {
 
+		// @TODO: return if name field. Need to somehow get field id
+
 		if ( $position == 550 ) {
-
-			try {
-
-				$fields = $this->get_contact_fields();
-				?>
-				<li class="solve_field_setting field_setting">
-					<label for="field_solve">
-						<?php _e( 'Solve field', $this->_slug ); ?>
-						<?php gform_tooltip( 'field_solve' ); ?>
-					</label>
-					<select name="field_solve" id="field_solve" onchange="SetFieldProperty('solve_field_setting', this.value);">
-						<option value="">-- Select Contact Field --</option>
-						<?php
-							foreach ( $fields as $f ) {
-								$type = ( false !== strpos( $f->name, 'custom' ) ) ? $f->type : $f->name;
-								printf( '<option value="%s" data-type="%s">%s</option>', $f->name, $type, $f->label );
-							}
-						?>
-						<option value="category" data-type="category">Category</option>
-					</select>
-				</li>
-				<?php
-
-			} catch (Exception $e) {
-				echo $e->getMessage();
-			}
-
+			?>
+			<li class="field_solve field_setting" style="display: list-item;">
+				<label for="field_solve">
+					Solve Field
+					<?php gform_tooltip( 'field_solve' ); ?>
+				</label>
+				<input type="text" size="30" id="field_solve" onchange="SetFieldProperty('field_solve', this.value);" />
+			</li>
+			<?php
 		}
 
 	}
 
 	public function form_tooltips( $tooltips ) {
 
-		$tooltips['field_solve'] = '<strong>Solve Contact:</strong> Choose the field in Solve that this field will populate';
+		$tooltips['field_solve'] = '<h6>Solve Contact</h6> Enter the Solve field name you want this form field to populate. Refer to the list of <a href="#">available contact fields</a>.';
 		return $tooltips;
 
 	}
@@ -329,7 +302,7 @@ class GFSolve extends GFAddOn {
 					// Adding setting to fields of type "text"
 					console.log('fieldSettings', fieldSettings);
 					$.each(fieldSettings, function(index, value) {
-						fieldSettings[index] += ', .solve_field_setting';
+						fieldSettings[index] += ', .field_solve';
 					});
 				}
 
@@ -341,94 +314,9 @@ class GFSolve extends GFAddOn {
 				}
 			}
 
-			// gform.hooks['action']['gform_post_load_field_settings'] = function (args) {
-			// 	console.log('test');
-			// 	console.log(args);
-			// };
-
-			var filter_solve_options = function (args) {
-				var $ 			= jQuery,
-					field 		= args[0],
-					form 		= args[1],
-					$options 	= $('#field_' + field.id + ' #field_solve option'),
-					supported;
-
-				$options.show();
-
-				switch (field.type) {
-					case 'text':
-						supported = ['jobtitle', 'company', 'businessphoneextension', 'text'];
-						break;
-					case 'textarea':
-						supported = ['businessaddress', 'homeaddress', 'background', 'textarea'];
-						break;
-					case 'select':
-						supported = ['jobtitle', 'company', 'assignedto', 'relatedto', 'category', 'select'];
-						break;
-					case 'multiselect':
-						supported = ['category'];
-						break;
-					case 'number':
-						supported = ['businessphonedirect', 'cellularphone', 'homephone', 'businessphonemain', 'businessphoneextension', 'businessfax', 'number', 'currency'];
-						break;
-					case 'checkbox':
-						supported = ['jobtitle', 'company', 'assignedto', 'category'];
-						break;
-					case 'radio':
-						supported = ['jobtitle', 'company', 'assignedto', 'archive', 'flagged', 'category', 'text', 'number', 'currency'];
-						break;
-					case 'hidden':
-						supported = ['firstname', 'lastname', 'jobtitle', 'company', 'businessemail', 'businessphonedirect', 'cellularphone', 'personalemail', 'otheremail', 'homephone', 'assignedto', 'website', 'businessphonemain', 'businessphoneextension', 'businessfax', 'businessaddress', 'homeaddress', 'relatedto', 'archive', 'flagged', 'background', 'category', 'url', 'text', 'textarea', 'email', 'number', 'phonenumber', 'currency'];
-						break;
-					case 'name':
-						// Automatically setup
-						break;
-					case 'date':
-						supported = ['date'];
-						break;
-					case 'phone':
-						supported = ['businessphonedirect', 'cellularphone', 'homephone', 'businessphonemain', 'businessfax', 'phonenumber'];
-						break;
-					case 'address':
-						supported = ['businessaddress', 'homeaddress', 'textarea'];
-						break;
-					case 'website':
-						supported = ['website', 'url'];
-						break;
-					case 'email':
-						supported = ['businessemail', 'personalemail', 'otheremail', 'email'];
-						break;
-					default:
-						break;
-				}
-
-				// console.log(supported);
-				// console.log($options);
-
-				// Remove unsupported contact fields
-				$.each($options, function () {
-
-					// skip if blank placeholder option
-					if ($(this).val() === '')
-						return;
-
-					if ($.inArray($(this).data('type'), supported) === -1) {
-						// $(this, $options).remove();
-						// $('#field_' + field.id + ' .solve_field_setting').find('[data-type="' + $(this).data('type') + '"]').hide();
-						$(this).hide();
-					}
-				});
-
-				// console.log('field', field);
-				// console.log('form', form);
-				// console.log('options', $options);
-			};
-
-			gform.addAction('gform_post_load_field_settings', 'filter_solve_options', 10);
-
 			jQuery(document).bind('gform_load_field_settings', function (event, field, form) {
 
-				jQuery('#field_solve').val(field['solve_field_setting']);
+				jQuery('#field_solve').val(field['field_solve']);
 
 				// console.log('event', event);
 				console.log('field', field);
@@ -456,9 +344,12 @@ class GFSolve extends GFAddOn {
 	public function after_submission( $entry, $form ) {
 
 		$contact_data 	= array();
+		$categories 	= array();
 		$form_settings 	= $this->get_form_settings( $form );
 		$filtermode 	= isset( $form_settings['filtermode'] ) ? $form_settings['filtermode'] : false;
 		$filterfield 	= isset( $form_settings['filterfield'] ) ? $form_settings['filterfield'] : false;
+
+		// wp_die( '<pre>' . print_r($form, true) . '</pre>' );
 
 		// Populate $contact_data array based on solve field selections
 		foreach ( $form['fields'] as $field ) {
@@ -466,17 +357,26 @@ class GFSolve extends GFAddOn {
 			if ( $field->type == 'name' ) {
 				$contact_data['firstname'] 	= isset( $entry[$field->id . '.3'] ) ? $entry[$field->id . '.3'] : '';
 				$contact_data['lastname']	= isset( $entry[$field->id . '.6'] ) ? $entry[$field->id . '.6'] : '';
-			} else if ( $solve_field = $field->solve_field_setting ) {
-				if ( $solve_field == 'category' ) {
-					$contact_data['categories'] = array(
-						'add' => array( 'category' => array( (int) $entry[$field->id] ) )
-					);
+			} else if ( ! empty( $solve_field = $field->field_solve ) ) {
+				if ( 1 < count( $category = explode( ':', $solve_field) ) ) {
+					$categories[] = (int) $category[1];
+				} else if ( 'category' == trim( $solve_field ) ) {
+					$categories[] = (int) $entry[$field->id];
 				} else {
 					$contact_data[$solve_field] = $entry[$field->id];
 				}
 			}
 
 		}
+
+		$contact_data['categories'] = array(
+			'add' => array( 'category' => $categories )
+		);
+
+		wp_die(
+			'<h4>$entry</h4><pre>' . print_r($entry, true) . '</pre>' .
+			'<h4>$contact_data</h4><pre>' . print_r($contact_data, true) . '</pre>'
+		);
 
 		// Check if $contact_data is empty
 		if ( empty( $contact_data ) ) {
