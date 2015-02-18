@@ -408,18 +408,22 @@ class GFSolve extends GFAddOn {
 		 */
 		foreach ( $form['fields'] as $field ) {
 
+			$solve_field = $field->field_solve;
+
 			if ( $field->type == 'name' ) { // auto configure name fields
 
 				$contact_data['firstname'] 	= isset( $entry[$field->id . '.3'] ) ? $entry[$field->id . '.3'] : '';
 				$contact_data['lastname']	= isset( $entry[$field->id . '.6'] ) ? $entry[$field->id . '.6'] : '';
 
-			} else if ( ! empty( $solve_field = $field->field_solve ) ) { // if solve field has input
+			} else if ( ! empty( $solve_field) ) { // if solve field has input
 
 				/**
 				 * explode solve input into array if question mark is present
 				 * used for basic conditionals
 				 */
-				if ( 1 < count( $conditional = explode( '?', $field->field_solve ) ) ) {
+				$conditional = explode( '?', $field->field_solve )
+
+				if ( 1 < count( $conditional ) ) {
 
 					$type 		= $conditional[0]; // type of conditional I.E 'category'
 					$condition 	= $conditional[1]; // the condition EG: 'contact_exists', '!contact_exists', '1231231231'
