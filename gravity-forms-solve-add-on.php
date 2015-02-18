@@ -469,6 +469,10 @@ class GFSolve extends GFAddOn {
 			'add' => array( 'category' => $categories )
 		);
 
+		$this->log_debug( $entry );
+		$this->log_debug( $contact_data );
+		return false;
+
 		// Check if $contact_data is empty
 		// Email admin and exit script
 		if ( empty( $contact_data ) ) {
