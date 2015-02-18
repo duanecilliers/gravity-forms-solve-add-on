@@ -29,6 +29,10 @@ GFForms::include_addon_framework();
 // Require Solve PHP Service Gateway.
 require dirname( __FILE__ ) . '/includes/solve360Service.php';
 
+if ( defined( 'WP_DEBUG' ) && true == WP_DEBUG ) {
+	require dirname( __FILE__ ) . '/includes/class-gflogger.php';
+}
+
 /**
  * Required Backdrop. Used for running one-off tasks in the background.
  *
@@ -383,7 +387,7 @@ class GFSolve extends GFAddOn {
 		}
 
 		$this->log_debug( '$filtermode: ' . $filtermode );
-		$this->log_debug( '$filterfield: ' . $filterfield );
+		$this->log_debug( '$filterfield: ' . $filterfield . ' ' . $entry[$filterfield] );
 
 		// Search existing Solve contacts
 		if ( $filtermode && $filterfield) {
@@ -396,6 +400,8 @@ class GFSolve extends GFAddOn {
 				$this->log_debug( 'Solve search failed! ' . $e->getMessage );
 			}
 		}
+
+		$this->log_debug( $contacts );
 
 		// wp_die(
 		// 	"filtermode: $filtermode<br>filtervalue: $filterfield<br>".
