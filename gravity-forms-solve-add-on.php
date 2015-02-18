@@ -332,6 +332,33 @@ class GFSolve extends GFAddOn {
 
 	}
 
+	function get_entry_meta( $entry_meta, $form_id ) {
+
+		$entry_meta['solve_status'] = array(
+			'label'                      => 'Solve Status',
+			'is_numeric'                 => false,
+			'update_entry_meta_callback' => array( $this, 'update_solve_status' ),
+			'is_default_column'          => true, // this column will be displayed by default on the entry list
+			'filter'                     => array(
+				'operators' => array( 'is', 'isnot' ),
+				'choices'   => array(
+					array( 'value' => 'failed', 'text' => 'Failed' ),
+					array( 'value' => 'added', 'text' => 'Added' ),
+					array( 'value' => 'updated', 'text' => 'Updated' )
+				)
+			)
+		);
+
+		return $entry_meta;
+
+	}
+
+	public function update_solve_status( $key, $entry, $form ) {
+
+		return 'failed';
+
+	}
+
 	public function after_submission_init( $entry, $form ) {
 
 		// Check if solve integration is enabled
@@ -351,11 +378,9 @@ class GFSolve extends GFAddOn {
 		$categories 	= array();
 		$form_settings 	= $this->get_form_settings( $form );
 
-		$solveEnabled 	= isset( $form_settings['isEnable'] ) ? $form_settings['isEnable'] : false;
-		$filtermode 	= isset( $form_settings['filtermode'] ) ? $form_settings['filtermode'] : false;
-		$filterfield 	= isset( $form_settings['filterfield'] ) ? $form_settings['filterfield'] : false;
+		$isSolveEnabled = isset( $form_settings['isEnabled'] ) ? (int) $form_settings['isEnabled'] : false;
 
-		if ( ! $solveEnabled ) {
+		if ( ! $isSolveEnabled ) {
 			return false;
 		}
 
@@ -392,6 +417,11 @@ class GFSolve extends GFAddOn {
 			return false;
 		}
 
+		// @TODO: Filter mode settings are buggy
+
+		$filtermode 	= isset( $form_settings['filtermode'] ) ? $form_settings['filtermode'] : false;
+		$filterfield 	= isset( $form_settings['filterfield'] ) ? $form_settings['filterfield'] : false;
+
 		$this->log_debug( '$filtermode: ' . $filtermode );
 		$this->log_debug( '$filterfield: ' . $filterfield . ' ' . $entry[$filterfield] );
 
@@ -424,6 +454,7 @@ class GFSolve extends GFAddOn {
 			try {
 				$contact 	= $this->solveService->editContact( $contact_id, $contact_data );
 				$status 	= 'updated';
+				gform_update_meta( $entry['id'], 'solve_status', $status );
 			} catch (Exception $e) {
 				$this->log_debug( 'Failed to updated Solve contact!' . $e->getMessage() );
 				$contact = new stdClass();
@@ -437,6 +468,7 @@ class GFSolve extends GFAddOn {
 				$contact_name 	= (string) $contact->item->name;
 				$contact_id 	= (integer) $contact->item->id;
 				$status			= 'added';
+				gform_update_meta( $entry['id'], 'solve_status', $status );
 			} catch (Exception $e) {
 				$this->log_debug( 'Failed to updated Solve contact!' . $e->getMessage() );
 				$contact = new stdClass();
@@ -447,6 +479,8 @@ class GFSolve extends GFAddOn {
 		if ( isset( $contact->errors ) ) {
 			$this->log_debug( 'Error while adding contact to Solve', 'Error: ' . $contact->errors->asXml() );
 			wp_mail( 'duane@signpost.co.za', 'Error while ' . $status . ' contact on Solve', 'Error: ' . $contact->errors->asXml() );
+			$status = 'failed';
+			gform_update_meta( $entry['id'], 'solve_status', $status );
 		} else {
 			wp_mail( 'duane@signpost.co.za', 'Contact ' . $status . ' on Solve', "Contact $contact_name https://secure.solve360.com/contact/$contact_id was posted to Solve." );
 		}
