@@ -382,6 +382,9 @@ class GFSolve extends GFAddOn {
 			return false;
 		}
 
+		$this->log_debug( '$filtermode: ' . $filtermode );
+		$this->log_debug( '$filterfield: ' . $filterfield );
+
 		// Search existing Solve contacts
 		if ( $filtermode && $filterfield) {
 			try {
