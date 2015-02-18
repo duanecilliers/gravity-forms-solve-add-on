@@ -71,6 +71,11 @@ class GFSolve extends GFAddOn {
 	// Required! Token, Solve360 menu > My Account > API Reference > API Token.
 	protected $token;
 
+	protected $email_to;
+	protected $email_from;
+	protected $email_cc;
+	protected $email_bcc;
+
 	// Solve service gateway object.
 	protected $solveService;
 
@@ -85,6 +90,10 @@ class GFSolve extends GFAddOn {
 
 		$this->user 		= isset( $this->plugin_settings['solve_user'] ) ? $this->plugin_settings['solve_user'] : false;
 		$this->token 		= isset( $this->plugin_settings['solve_token'] ) ? $this->plugin_settings['solve_token'] : false;
+		$this->email_to 	= isset( $this->plugin_settings['email_to'] ) ? $this->plugin_settings['email_to'] : false;
+		$this->email_from 	= isset( $this->plugin_settings['email_from'] ) ? $this->plugin_settings['email_from'] : false;
+		$this->email_cc 	= isset( $this->plugin_settings['email_cc'] ) ? $this->plugin_settings['email_cc'] : false;
+		$this->email_bcc 	= isset( $this->plugin_settings['email_bcc'] ) ? $this->plugin_settings['email_bcc'] : false;
 
 		if ( ! $this->user && ! $this->token ) {
 			throw new Exception( sprintf( 'Solve user and token are required! <a href="%s">Update your Solve credentials</a>.', $this->get_plugin_settings_url() ) );
@@ -373,10 +382,8 @@ class GFSolve extends GFAddOn {
 		if ( ! isset( $form['gfsolve']['isEnabled'] ) || ! $form['gfsolve']['isEnabled'] )
 			return;
 
-		$this->after_submission( $entry, $form );
-
-		// $task = new \HM\Backdrop\Task( array( $this, 'after_submission' ), $entry, $form );
-		// $task->schedule();
+		$task = new \HM\Backdrop\Task( array( $this, 'after_submission' ), $entry, $form );
+		$task->schedule();
 
 	}
 
@@ -462,7 +469,7 @@ class GFSolve extends GFAddOn {
 		// Email admin and exit script
 		if ( empty( $contact_data ) ) {
 			$this->log_debug( sprintf( 'Entry %s from form %s not posted to solve, no field data found.', $entry['id'], $form['id'] ) );
-			wp_mail( 'duane@signpost.co.za', sprintf( 'Entry %s from form %s not posted to solve', $entry['id'], $form['id'] ), sprintf( 'Entry %s from form %s not posted to solve, no field data found.', $entry['id'], $form['id'] ) );
+			wp_mail( $this->email_to, sprintf( 'Entry %s from form %s not posted to solve', $entry['id'], $form['id'] ), sprintf( 'Entry %s from form %s not posted to solve, no field data found.', $entry['id'], $form['id'] ) );
 			return false;
 		}
 
@@ -557,11 +564,11 @@ class GFSolve extends GFAddOn {
 
 		if ( isset( $contact->errors ) ) {
 			$this->log_debug( 'Error while adding contact to Solve', 'Error: ' . $contact->errors->asXml() );
-			wp_mail( 'duane@signpost.co.za', 'Error while ' . $status . ' contact on Solve', 'Error: ' . $contact->errors->asXml() );
+			wp_mail( $this->email_to, 'Error while ' . $status . ' contact on Solve', 'Error: ' . $contact->errors->asXml() );
 			$status = 'failed';
 			gform_update_meta( $entry['id'], 'solve_status', $status );
 		} else {
-			wp_mail( 'duane@signpost.co.za', 'Contact ' . $status . ' on Solve', "Contact $contact_name https://secure.solve360.com/contact/$contact_id was posted to Solve." );
+			wp_mail( $this->email_to, 'Contact ' . $status . ' on Solve', "Contact $contact_name https://secure.solve360.com/contact/$contact_id was posted to Solve." );
 		}
 
 	}
