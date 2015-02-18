@@ -421,7 +421,7 @@ class GFSolve extends GFAddOn {
 				 * explode solve input into array if question mark is present
 				 * used for basic conditionals
 				 */
-				$conditional = explode( '?', $field->field_solve )
+				$conditional = explode( '?', $field->field_solve );
 
 				if ( 1 < count( $conditional ) ) {
 
