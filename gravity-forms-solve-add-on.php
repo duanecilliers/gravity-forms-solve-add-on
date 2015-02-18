@@ -373,23 +373,25 @@ class GFSolve extends GFAddOn {
 			'add' => array( 'category' => $categories )
 		);
 
-		wp_die(
-			'<h4>$entry</h4><pre>' . print_r($entry, true) . '</pre>' .
-			'<h4>$contact_data</h4><pre>' . print_r($contact_data, true) . '</pre>'
-		);
+		$this->log_debug( $contact_data );
 
 		// Check if $contact_data is empty
 		if ( empty( $contact_data ) ) {
+			$this->log_debug( sprintf( 'Entry %s from form %s not posted to solve, no field data found.', $entry['id'], $form['id'] ) );
 			wp_mail( 'duane@signpost.co.za', sprintf( 'Entry %s from form %s not posted to solve', $entry['id'], $form['id'] ), sprintf( 'Entry %s from form %s not posted to solve, no field data found.', $entry['id'], $form['id'] ) );
 			return false;
 		}
 
 		// Search existing Solve contacts
 		if ( $filtermode && $filterfield) {
-			$contacts = $this->solveService->searchContacts( array(
-				'filtermode' => $filtermode,
-				'filtervalue' => $entry[$filterfield]
-			) );
+			try {
+				$contacts = $this->solveService->searchContacts( array(
+					'filtermode' => $filtermode,
+					'filtervalue' => $entry[$filterfield]
+				) );
+			} catch (Exception $e) {
+				$this->log_debug( 'Solve search failed! ' . $e->getMessage );
+			}
 		}
 
 		// wp_die(
@@ -400,22 +402,39 @@ class GFSolve extends GFAddOn {
 		// );
 
 		if ( isset( $contacts ) && (integer) $contacts->count > 0 ) {
-			$contact_id 	= (integer)current($contacts->children())->id;
-			$contact_name 	= (string)current($contacts->children())->name;
-			$contact 		= $this->solveService->editContact($contact_id, $contact_data);
+
+			$contact_id 	= (integer) current( $contacts->children() )->id;
+			$contact_name 	= (string) current( $contacts->children() )->name;
+
+			try {
+				$contact 	= $this->solveService->editContact( $contact_id, $contact_data );
+				$status 	= 'updated';
+			} catch (Exception $e) {
+				$this->log_debug( 'Failed to updated Solve contact!' . $e->getMessage() );
+				$contact = new stdClass();
+				$contact->errors = array( 'status' => 'failed', 'message' => $e->getMessage() );
+			}
+
 		} else {
-			$contact 		= $this->solveService->addContact( $contact_data );
-			$contact_name 	= (string) $contact->item->name;
-			$contact_id 	= (integer) $contact->item->id;
+
+			try {
+				$contact 		= $this->solveService->addContact( $contact_data );
+				$contact_name 	= (string) $contact->item->name;
+				$contact_id 	= (integer) $contact->item->id;
+				$status			= 'added';
+			} catch (Exception $e) {
+				$this->log_debug( 'Failed to updated Solve contact!' . $e->getMessage() );
+				$contact = new stdClass();
+				$contact->errors = array( 'status' => 'failed', 'message' => $e->getMessage() );
+			}
 		}
 
 		if ( isset( $contact->errors ) ) {
-			wp_mail( 'duane@signpost.co.za', 'Error while adding contact to Solve', 'Error: ' . $contact->errors->asXml() );
+			$this->log_debug( 'Error while adding contact to Solve', 'Error: ' . $contact->errors->asXml() );
+			wp_mail( 'duane@signpost.co.za', 'Error while ' . $status . ' contact on Solve', 'Error: ' . $contact->errors->asXml() );
 		} else {
-			wp_mail( 'duane@signpost.co.za', 'Contact posted to Solve', "Contact $contact_name https://secure.solve360.com/contact/$contact_id was posted to Solve." );
+			wp_mail( 'duane@signpost.co.za', 'Contact ' . $status . ' on Solve', "Contact $contact_name https://secure.solve360.com/contact/$contact_id was posted to Solve." );
 		}
-
-		// wp_mail( 'duane@signpost.co.za', 'Testing backdrop', '<h1>Entry</h1><pre>' . print_r($entry, true) . '</pre><br>' . '<h1>Form</h1><pre>' . print_r($form, true) . '</pre>' );
 
 	}
 
