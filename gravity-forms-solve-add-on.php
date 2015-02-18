@@ -334,6 +334,12 @@ class GFSolve extends GFAddOn {
 
 	function get_entry_meta( $entry_meta, $form_id ) {
 
+		$form 			= $this->get_current_form();
+		$form_settings 	= $this->get_form_settings( $form );
+
+		if ( ! isset( $form_settings['isEnabled'] ) || 0 == $form_settings['isEnabled'] )
+			return $entry_meta;
+
 		$entry_meta['solve_status'] = array(
 			'label'                      => 'Solve Status',
 			'is_numeric'                 => false,
