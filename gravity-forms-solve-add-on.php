@@ -26,8 +26,10 @@ if ( ! class_exists('GFForms' ) ) {
 // Load Gravity Forms Add-on Framework.
 GFForms::include_addon_framework();
 
-// Require Solve PHP Service Gateway.
-require dirname( __FILE__ ) . '/includes/solve360Service.php';
+if ( ! class_exists( 'Solve360Service' ) ) {
+	// Require Solve PHP Service Gateway.
+	require dirname( __FILE__ ) . '/includes/solve360Service.php';
+}
 
 if ( defined( 'WP_DEBUG' ) && true == WP_DEBUG ) {
 	require dirname( __FILE__ ) . '/includes/class-gflogger.php';
