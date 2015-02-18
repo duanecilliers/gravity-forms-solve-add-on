@@ -2,7 +2,7 @@
 
 /**
  * @link              http://duane.co.za/wordress-plugins/gravity-forms-solve-add-on
- * @since             1.0.0
+ * @since             0.1
  * @package           GFSolve
  *
  * @wordpress-plugin
@@ -393,48 +393,51 @@ class GFSolve extends GFAddOn {
 		 */
 		foreach ( $form['fields'] as $field ) {
 
-			if ( $field->type == 'name' ) {
+			if ( $field->type == 'name' ) { // auto configure name fields
 
 				$contact_data['firstname'] 	= isset( $entry[$field->id . '.3'] ) ? $entry[$field->id . '.3'] : '';
 				$contact_data['lastname']	= isset( $entry[$field->id . '.6'] ) ? $entry[$field->id . '.6'] : '';
 
-			} else if ( ! empty( $solve_field = $field->field_solve ) ) {
+			} else if ( ! empty( $solve_field = $field->field_solve ) ) { // if solve field has input
 
+				/**
+				 * explode solve input into array if question mark is present
+				 * used for basic conditionals
+				 */
 				if ( 1 < count( $conditional = explode( '?', $field->field_solve ) ) ) {
 
-					// wp_die( '<pre>' . print_r($conditional, true) . '</pre>' );
+					$type 		= $conditional[0]; // type of conditional I.E 'category'
+					$condition 	= $conditional[1]; // the condition EG: 'contact_exists', '!contact_exists', '1231231231'
 
-					$type 		= $conditional[0];
-					$condition 	= $conditional[1];
-
-					if ( false === strpos( $condition, '!' ) ) { // truthy
+					if ( false === strpos( $condition, '!' ) ) { // truthy condition
 						if ( 'contact_exists' == trim( $condition ) ) { // if contact exists
 							$categories_ifcontact[] = $entry[$field->id];
 						}
-						if ( (int) $condition != 0 ) { // if condition is an integer, only add if category exists
+						if ( (int) $condition != 0 ) { // if condition is an integer, it's assumed to be a category tag ID. Add value as category if category exists
 							$categories_ifcat[(int) $condition] = (int) $entry[$field->id];
 						}
 
-					} else { // falsy
-						$condition = str_replace( '!', '', trim( $condition ) );
+					} else { // falsy condition
+						$condition = str_replace( '!', '', trim( $condition ) ); // strip explamation
 						if ( 'contact_exists' == $condition ) { // if contact doesn't exist
 							$categories_ifnocontact[] = $entry[$field->id];
 						}
-						if ( (int) $condition != 0 ) {
+						if ( (int) $condition != 0 ) { // if solve field input contains an integer, assumed to be a category tag ID.
 							$categories_ifnocat[(int) $condition] = $entry[$field->id];
 						}
 					}
 
-				} else if ( 1 < count( $category = explode( ':', $solve_field) ) ) {
-
-					$categories[] = (int) $category[1];
-
-				} else if ( 'category' == trim( $solve_field ) ) {
+				} else if ( 'category' == trim( $solve_field ) ) { // post value of this field as category
 
 					$categories[] = (int) $entry[$field->id];
 
 				} else {
 
+					/**
+					 * Assumed to be a valid Solve field name
+					 * Go to My Account > API Reference > Contact > Fields for a list
+					 * @todo  validate input
+					 */
 					$contact_data[$solve_field] = $entry[$field->id];
 
 				}
@@ -442,11 +445,13 @@ class GFSolve extends GFAddOn {
 
 		}
 
+		// Add categories to $contact_data for posting to Solve
 		$contact_data['categories'] = array(
 			'add' => array( 'category' => $categories )
 		);
 
 		// Check if $contact_data is empty
+		// Email admin and exit script
 		if ( empty( $contact_data ) ) {
 			$this->log_debug( sprintf( 'Entry %s from form %s not posted to solve, no field data found.', $entry['id'], $form['id'] ) );
 			wp_mail( 'duane@signpost.co.za', sprintf( 'Entry %s from form %s not posted to solve', $entry['id'], $form['id'] ), sprintf( 'Entry %s from form %s not posted to solve, no field data found.', $entry['id'], $form['id'] ) );
@@ -455,6 +460,7 @@ class GFSolve extends GFAddOn {
 
 		// @TODO: Filter mode settings are buggy
 
+		// Get filter settings. Used for search Solve for existing contacts
 		$filtermode 	= isset( $form_settings['filtermode'] ) ? $form_settings['filtermode'] : false;
 		$filterfield 	= isset( $form_settings['filterfield'] ) ? $form_settings['filterfield'] : false;
 
@@ -475,17 +481,22 @@ class GFSolve extends GFAddOn {
 
 		if ( isset( $contacts ) && (integer) $contacts->count > 0 ) {
 
+			// Merge contact data categories with categories to be added if contact exists
+			$contact_data['categories']['add']['category'] = array_merge( $contact_data['categories']['add']['category'], $categories_ifcontact );
+
 			$contact_id 	= (integer) current( $contacts->children() )->id;
 			$contact_name 	= (string) current( $contacts->children() )->name;
 
-			$contact 		= $this->solveService->getContact( $contact_id );
-			$contact_cats 	= current( $contact->categories );
+			// get contact data from Solve to retreive existing categories
+			try {
+				$contact 		= $this->solveService->getContact( $contact_id );
+				$contact_cats 	= current( $contact->categories );
+			} catch (Exception $e) {
+				$this->log_debug( 'Failed to get contact from Solve: ' . $e->getMessage() );
+				return false;
+			}
 
-			$contact_data['categories']['add']['category'] = array_merge( $contact_data['categories']['add']['category'], $categories_ifcontact );
-
-			/**
-			 * Merge ...
-			 */
+			// Merge contact data categories with categories to be added if a cat exists
 			if ( ! empty( $categories_ifcat ) ) {
 				foreach ( $contact_cats as $cat ) {
 					if ( isset( $categories_ifcat[$cat->id] ) ) {
@@ -494,6 +505,7 @@ class GFSolve extends GFAddOn {
 				}
 			}
 
+			// Update $categories_ifnocat with categories to be added if a cat doesn't exists
 			if ( ! empty( $categories_ifnocat ) ) {
 				foreach ( $contact_cats as $cat ) {
 					if ( isset( $categories_ifnocat[(string) $cat->id] ) ) {
@@ -502,8 +514,10 @@ class GFSolve extends GFAddOn {
 				}
 			}
 
+			// Merge contact data categories with categories to be added if contact exists
 			$contact_data['categories']['add']['category'] = array_merge( $contact_data['categories']['add']['category'], $categories_ifnocat );
 
+			// Update existing contact with new data
 			try {
 				$contact 	= $this->solveService->editContact( $contact_id, $contact_data );
 				$status 	= 'updated';
@@ -516,6 +530,7 @@ class GFSolve extends GFAddOn {
 
 		} else {
 
+			// Add new contact
 			try {
 
 				$contact_data['categories']['add']['category'] = array_merge( $contact_data['categories']['add']['category'], $categories_ifnocontact );
