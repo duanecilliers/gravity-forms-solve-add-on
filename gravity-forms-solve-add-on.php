@@ -350,8 +350,14 @@ class GFSolve extends GFAddOn {
 		$contact_data 	= array();
 		$categories 	= array();
 		$form_settings 	= $this->get_form_settings( $form );
+
+		$solveEnabled 	= isset( $form_settings['isEnable'] ) ? $form_settings['isEnable'] : false;
 		$filtermode 	= isset( $form_settings['filtermode'] ) ? $form_settings['filtermode'] : false;
 		$filterfield 	= isset( $form_settings['filterfield'] ) ? $form_settings['filterfield'] : false;
+
+		if ( ! $solveEnabled ) {
+			return false;
+		}
 
 		// wp_die( '<pre>' . print_r($form, true) . '</pre>' );
 
