@@ -75,6 +75,7 @@ class GFSolve extends GFAddOn {
 	protected $email_from;
 	protected $email_cc;
 	protected $email_bcc;
+	protected $email_headers;
 
 	// Solve service gateway object.
 	protected $solveService;
@@ -88,12 +89,26 @@ class GFSolve extends GFAddOn {
 
 		$this->plugin_settings 	= $this->get_plugin_settings();
 
-		$this->user 		= isset( $this->plugin_settings['solve_user'] ) ? $this->plugin_settings['solve_user'] : false;
-		$this->token 		= isset( $this->plugin_settings['solve_token'] ) ? $this->plugin_settings['solve_token'] : false;
-		$this->email_to 	= isset( $this->plugin_settings['email_to'] ) ? $this->plugin_settings['email_to'] : false;
-		$this->email_from 	= isset( $this->plugin_settings['email_from'] ) ? $this->plugin_settings['email_from'] : false;
-		$this->email_cc 	= isset( $this->plugin_settings['email_cc'] ) ? $this->plugin_settings['email_cc'] : false;
-		$this->email_bcc 	= isset( $this->plugin_settings['email_bcc'] ) ? $this->plugin_settings['email_bcc'] : false;
+		$this->user 			= isset( $this->plugin_settings['solve_user'] ) ? $this->plugin_settings['solve_user'] : false;
+		$this->token 			= isset( $this->plugin_settings['solve_token'] ) ? $this->plugin_settings['solve_token'] : false;
+		$this->email_to 		= isset( $this->plugin_settings['email_to'] ) ? $this->plugin_settings['email_to'] : false;
+		$this->email_from 		= isset( $this->plugin_settings['email_from'] ) ? $this->plugin_settings['email_from'] : false;
+		$this->email_cc 		= isset( $this->plugin_settings['email_cc'] ) ? $this->plugin_settings['email_cc'] : false;
+		$this->email_bcc 		= isset( $this->plugin_settings['email_bcc'] ) ? $this->plugin_settings['email_bcc'] : false;
+		$this->email_headers 	= array();
+
+		/**
+		 * Set wp_mail headers
+		 */
+		if ( $this->from ) {
+			$this->email_headers[] = sprintf( 'From: %s', $this->from );
+		}
+		if ( $this->email_cc ) {
+			$this->email_headers[] = sprintf( 'Cc: %s', $this->email_cc );
+		}
+		if ( $this->email_bcc ) {
+			$this->email_headers[] = sprintf( 'Bcc: %s', $this->email_bcc );
+		}
 
 		if ( ! $this->user && ! $this->token ) {
 			throw new Exception( sprintf( 'Solve user and token are required! <a href="%s">Update your Solve credentials</a>.', $this->get_plugin_settings_url() ) );
@@ -473,7 +488,7 @@ class GFSolve extends GFAddOn {
 		// Email admin and exit script
 		if ( empty( $contact_data ) ) {
 			$this->log_debug( sprintf( 'Entry %s from form %s not posted to solve, no field data found.', $entry['id'], $form['id'] ) );
-			wp_mail( $this->email_to, sprintf( 'Entry %s from form %s not posted to solve', $entry['id'], $form['id'] ), sprintf( 'Entry %s from form %s not posted to solve, no field data found.', $entry['id'], $form['id'] ) );
+			wp_mail( $this->email_to, sprintf( 'Entry %s from form %s not posted to solve', $entry['id'], $form['id'] ), sprintf( 'Entry %s from form %s not posted to solve, no field data found.', $entry['id'], $form['id'] ), $this->email_headers );
 			return false;
 		}
 
@@ -568,11 +583,11 @@ class GFSolve extends GFAddOn {
 
 		if ( isset( $contact->errors ) ) {
 			$this->log_debug( 'Error while adding contact to Solve', 'Error: ' . $contact->errors->asXml() );
-			wp_mail( $this->email_to, 'Error while ' . $status . ' contact on Solve', 'Error: ' . $contact->errors->asXml() );
+			wp_mail( $this->email_to, 'Error while ' . $status . ' contact on Solve', 'Error: ' . $contact->errors->asXml(), $this->email_headers );
 			$status = 'failed';
 			gform_update_meta( $entry['id'], 'solve_status', $status );
 		} else {
-			wp_mail( $this->email_to, 'Contact ' . $status . ' on Solve', "Contact $contact_name https://secure.solve360.com/contact/$contact_id was posted to Solve." );
+			wp_mail( $this->email_to, 'Contact ' . $status . ' on Solve', "Contact $contact_name https://secure.solve360.com/contact/$contact_id was posted to Solve.", $this->email_headers );
 		}
 
 	}
