@@ -583,9 +583,9 @@ class GFSolve extends GFAddOn {
 
 		if ( isset( $contact->errors ) ) {
 			$this->log_debug( 'Error while adding contact to Solve', 'Error: ' . $contact->errors->asXml() );
-			wp_mail( $this->email_to, 'Error while ' . $status . ' contact on Solve', 'Error: ' . $contact->errors->asXml(), $this->email_headers );
 			$status = 'failed';
 			gform_update_meta( $entry['id'], 'solve_status', $status );
+			wp_mail( $this->email_to, 'Error while ' . $status . ' contact on Solve', 'Error: ' . $contact->errors->asXml(), $this->email_headers );
 		} else {
 			wp_mail( $this->email_to, 'Contact ' . $status . ' on Solve', "Contact $contact_name https://secure.solve360.com/contact/$contact_id was posted to Solve.", $this->email_headers );
 		}
