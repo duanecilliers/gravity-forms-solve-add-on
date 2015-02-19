@@ -100,8 +100,8 @@ class GFSolve extends GFAddOn {
 		/**
 		 * Set wp_mail headers
 		 */
-		if ( $this->from ) {
-			$this->email_headers[] = sprintf( 'From: %s', $this->from );
+		if ( $this->email_from ) {
+			$this->email_headers[] = sprintf( 'From: %s', $this->email_from );
 		}
 		if ( $this->email_cc ) {
 			$this->email_headers[] = sprintf( 'Cc: %s', $this->email_cc );
