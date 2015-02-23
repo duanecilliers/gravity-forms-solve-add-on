@@ -409,6 +409,7 @@ if ( class_exists('GFForms' ) ) :
 			$categories_ifcontact 	= array(); // stores category IDs to be added if contact exists
 			$categories_ifnocontact	= array(); // stores category IDs to be added if contact doesn't exist
 			$notes 					= array(); // Contact note activities
+			$websites				= array(); // contact website activities
 			$form_settings 			= $this->get_form_settings( $form ); // store form settings
 
 			// Check if Solve integration is enabled for the submitted form
@@ -472,6 +473,13 @@ if ( class_exists('GFForms' ) ) :
 							$notes[]['details'] = $note[1] . ': ' . nl2br( $entry[$field->id] );
 						}
 
+					} else if ( false !== strpos( $solve_field, 'website' ) ) {
+
+						$website = explode( ':', $solve_field );
+						if ( 1 < count( $website ) ) {
+
+							$websites[] = array( 'caption' => $website[1], 'url' => $entry[$field->id] );
+						}
 					} else {
 
 						/**
@@ -606,6 +614,9 @@ if ( class_exists('GFForms' ) ) :
 				 */
 				foreach ( $notes as $note ) {
 					$this->solveService->addActivity( $contact_id, 'note', $note );
+				}
+				foreach ( $websites as $website ) {
+					$this->solveService->addActivity( $contact_id, 'website', $website );
 				}
 
 				wp_mail( $this->email_to, 'Contact ' . $status . ' on Solve', "Contact $contact_name https://secure.solve360.com/contact/$contact_id was posted to Solve.", $this->email_headers );
