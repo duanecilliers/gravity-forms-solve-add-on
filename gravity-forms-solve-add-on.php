@@ -593,10 +593,11 @@ if ( class_exists('GFForms' ) ) :
 			}
 
 			if ( isset( $contact->errors ) ) {
-				$this->log_debug( 'Error while adding contact to Solve', 'Error: ' . $contact->errors->asXml() );
+				$this->log_debug( 'Error while adding contact to Solve', 'Error: ' );
+				$this->log_debug( $contact->errors->asXml() );
 				$status = 'failed';
 				gform_update_meta( $entry['id'], 'solve_status', $status );
-				wp_mail( $this->email_to, 'Error while ' . $status . ' contact on Solve', 'Error: ' . $contact->errors->asXml(), $this->email_headers );
+				wp_mail( $this->email_to, 'Error while adding contact to Solve', 'Error: ' . $contact->errors->asXml(), $this->email_headers );
 
 			} else {
 
