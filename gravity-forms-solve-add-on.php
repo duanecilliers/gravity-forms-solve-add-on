@@ -395,8 +395,9 @@ if ( class_exists('GFForms' ) ) :
 			if ( ! isset( $form['gfsolve']['isEnabled'] ) || ! $form['gfsolve']['isEnabled'] )
 				return;
 
-			$task = new \HM\Backdrop\Task( array( $this, 'after_submission' ), $entry, $form );
-			$task->schedule();
+			// $task = new \HM\Backdrop\Task( array( $this, 'after_submission' ), $entry, $form );
+			// $task->schedule();
+			$this->after_submission( $entry, $form );
 
 		}
 
@@ -427,8 +428,14 @@ if ( class_exists('GFForms' ) ) :
 
 				if ( $field->type == 'name' ) { // auto configure name fields
 
-					$contact_data['firstname'] 	= isset( $entry[$field->id . '.3'] ) ? $entry[$field->id . '.3'] : '';
-					$contact_data['lastname']	= isset( $entry[$field->id . '.6'] ) ? $entry[$field->id . '.6'] : '';
+					if ( isset( $entry[$field->id . '.3'] ) && isset( $entry[$field->id . '.6'] ) ) {
+						$contact_data['firstname'] = $entry[$field->id . '.3'];
+						$contact_data['lastname'] = $entry[$field->id . '.6'];
+					} else if ( trim( $solve_field ) == 'firstname' ) {
+						$contact_data['firstname'] = $entry[$field->id];
+					} else if ( trim( $solve_field ) == 'lastname' ) {
+						$contact_data['lastname'] = $entry[$field->id];
+					}
 
 				} else if ( ! empty( $solve_field) ) { // if solve field has input
 
