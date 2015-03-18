@@ -450,7 +450,18 @@ if ( class_exists('GFForms' ) ) :
 						$type 		= $conditional[0]; // type of conditional I.E 'category'
 						$condition 	= $conditional[1]; // the condition EG: 'contact_exists', '!contact_exists', '1231231231'
 
-						if ( false === strpos( $condition, '!' ) ) { // truthy condition
+						if ( false !== strpos( $condition, 'field_' ) ) { // field conditional i.e field_17=value
+
+							$condition_vals = explode( '=', $condition );
+							$field_condition = explode( '_', $condition_vals[0] );
+							$field_id = isset( $field_condition[1] ) ? $field_condition[1] : '';
+							$field_val = isset( $condition_vals[1] ) ? $condition_vals[1] : '';
+
+							if ( $type == 'category' && isset( $entry[$field_id] ) && isset( $entry[$field->id] ) && $entry[$field_id] == $field_val ) {
+								$categories[] = (int) $entry[$field->id];
+							}
+
+						} else if ( false === strpos( $condition, '!' ) ) { // truthy condition
 							if ( 'contact_exists' == trim( $condition ) ) { // if contact exists
 								$categories_ifcontact[] = $entry[$field->id];
 							}
