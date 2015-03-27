@@ -625,6 +625,8 @@ if ( class_exists('GFForms' ) ) :
 				gform_update_meta( $entry['id'], 'solve_status', $status );
 				wp_mail( $this->email_to, 'Error while adding contact to Solve', 'Error: ' . $contact->errors->asXml(), $this->email_headers );
 
+				do_action( 'gfsolve_contact_failed', $contact );
+
 			} else {
 
 				/**
@@ -638,6 +640,8 @@ if ( class_exists('GFForms' ) ) :
 				}
 
 				wp_mail( $this->email_to, 'Contact ' . $status . ' on Solve', "Contact $contact_name https://secure.solve360.com/contact/$contact_id was posted to Solve.", $this->email_headers );
+
+				do_action( 'gfsolve_contact_processed', $contact_id, $entry, $form );
 			}
 
 		}
