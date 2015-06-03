@@ -646,7 +646,9 @@ if ( class_exists('GFForms' ) ) :
 
 				wp_mail( $this->email_to, 'Contact ' . $status . ' on Solve', "Contact $contact_name https://secure.solve360.com/contact/$contact_id was posted to Solve.", $this->email_headers );
 
-				do_action( $this->_slug . '_contact_processed', $contact_id, $status, $entry, $form );
+				$contact = $this->solveService->getContact( $contact_id );
+
+				do_action( $this->_slug . '_contact_processed', $status, $contact );
 			}
 
 		}
