@@ -593,6 +593,8 @@ if ( class_exists('GFForms' ) ) :
 					$contact 	= $this->solveService->editContact( $contact_id, $contact_data );
 					$status 	= 'updated';
 					gform_update_meta( $entry['id'], 'solve_status', $status );
+					do_action( $this->_slug . '_contact_updated', $contact_data );
+
 				} catch (Exception $e) {
 					$this->log_debug( 'Failed to updated Solve contact!' . $e->getMessage() );
 					$contact = new stdClass();
@@ -610,7 +612,10 @@ if ( class_exists('GFForms' ) ) :
 					$contact_name 	= (string) $contact->item->name;
 					$contact_id 	= (integer) $contact->item->id;
 					$status			= 'added';
+
 					gform_update_meta( $entry['id'], 'solve_status', $status );
+					do_action( $this->_slug . '_contact_added', $contact_data );
+
 				} catch (Exception $e) {
 					$this->log_debug( 'Failed to updated Solve contact!' . $e->getMessage() );
 					$contact = new stdClass();
