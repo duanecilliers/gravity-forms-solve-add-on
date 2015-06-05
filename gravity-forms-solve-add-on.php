@@ -648,7 +648,7 @@ if ( class_exists('GFForms' ) ) :
 
 				$contact = $this->solveService->getContact( $contact_id );
 
-				do_action( $this->_slug . '_contact_processed', $status, $contact );
+				do_action( $this->_slug . '_contact_processed', $status, $contact, $contact_data );
 			}
 
 		}
