@@ -9,7 +9,7 @@
  * Plugin Name:       Gravity Forms Solve Add-on
  * Plugin URI:        http://duane.co.za/wordpress-plugins/gravity-forms-solve-add-on
  * Description:       This is the most powerful Solve integration available for WordPress
- * Version:           0.1
+ * Version:           0.2
  * Author:            Duane Cilliers
  * Author URI:        http://duane.co.za
  * License:           GPL-2.0+
@@ -43,7 +43,7 @@ if ( class_exists('GFForms' ) ) :
 	class GFSolve extends GFAddOn {
 
 		// The version number is used for example during add-on upgrades.
-		protected $_version = '0.1';
+		protected $_version = '0.2';
 
 		// The Framework will display an appropriate message on the plugins page if necessary.
 		protected $_min_gravityforms_version = '1.9.1.2';
