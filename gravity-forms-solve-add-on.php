@@ -395,10 +395,9 @@ if ( class_exists('GFForms' ) ) :
 			if ( ! isset( $form['gfsolve']['isEnabled'] ) || ! $form['gfsolve']['isEnabled'] )
 				return;
 
-			// $task = new \HM\Backdrop\Task( array( $this, 'after_submission' ), $entry, $form );
-			// $task->schedule();
-			$this->after_submission( $entry, $form );
-
+			$task = new \HM\Backdrop\Task( array( $this, 'after_submission' ), $entry, $form );
+			$task->schedule();
+			// $this->after_submission( $entry, $form );
 		}
 
 		public function after_submission( $entry, $form ) {
