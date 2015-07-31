@@ -389,17 +389,6 @@ if ( class_exists('GFForms' ) ) :
 
 		}
 
-		public function after_submission_init( $entry, $form ) {
-
-			// Check if solve integration is enabled
-			if ( ! isset( $form['gfsolve']['isEnabled'] ) || ! $form['gfsolve']['isEnabled'] )
-				return;
-
-			// $task = new \HM\Backdrop\Task( array( $this, 'after_submission' ), $entry, $form );
-			// $task->schedule();
-			$this->after_submission( $entry, $form );
-		}
-
 		/**
 		 * Returns an array of Gform sub-field ids, like checkbox choices for example
 		 * Example:
@@ -415,7 +404,7 @@ if ( class_exists('GFForms' ) ) :
 		 */
 		public function get_split_field_ids_from_entry( $entry, $field ) {
 
-			$pattern = "/" . $field->id . "\.*/";
+			$pattern = "/^[" . $field->id . "]\.\d+$/";
 			return preg_grep($pattern, array_keys($entry));
 		}
 
@@ -439,6 +428,17 @@ if ( class_exists('GFForms' ) ) :
 				$value = $entry[$field->id];
 			}
 			return $value;;
+		}
+
+		public function after_submission_init( $entry, $form ) {
+
+			// Check if solve integration is enabled
+			if ( ! isset( $form['gfsolve']['isEnabled'] ) || ! $form['gfsolve']['isEnabled'] )
+				return;
+
+			// $task = new \HM\Backdrop\Task( array( $this, 'after_submission' ), $entry, $form );
+			// $task->schedule();
+			$this->after_submission( $entry, $form );
 		}
 
 		public function after_submission( $entry, $form ) {
@@ -566,7 +566,7 @@ if ( class_exists('GFForms' ) ) :
 			// Email admin and exit script
 			if ( empty( $contact_data ) ) {
 				$this->log_debug( sprintf( 'Entry %s from form %s not posted to solve, no field data found.', $entry['id'], $form['id'] ) );
-				wp_mail( $this->email_to, sprintf( 'Entry %s from form %s not posted to solve', $entry['id'], $form['id'] ), sprintf( 'Entry %s from form %s not posted to solve, no field data found.', $entry['id'], $form['id'] ), $this->email_headers );
+				// wp_mail( $this->email_to, sprintf( 'Entry %s from form %s not posted to solve', $entry['id'], $form['id'] ), sprintf( 'Entry %s from form %s not posted to solve, no field data found.', $entry['id'], $form['id'] ), $this->email_headers );
 				return false;
 			}
 
