@@ -9,7 +9,7 @@
  * Plugin Name:       Gravity Forms Solve Add-on
  * Plugin URI:        http://duane.co.za/wordpress-plugins/gravity-forms-solve-add-on
  * Description:       This is the most powerful Solve integration available for WordPress
- * Version:           0.3.0
+ * Version:           0.3.1
  * Author:            Duane Cilliers
  * Author URI:        http://duane.co.za
  * License:           GPL-2.0+
