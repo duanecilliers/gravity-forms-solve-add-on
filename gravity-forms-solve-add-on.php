@@ -395,9 +395,50 @@ if ( class_exists('GFForms' ) ) :
 			if ( ! isset( $form['gfsolve']['isEnabled'] ) || ! $form['gfsolve']['isEnabled'] )
 				return;
 
-			$task = new \HM\Backdrop\Task( array( $this, 'after_submission' ), $entry, $form );
-			$task->schedule();
-			// $this->after_submission( $entry, $form );
+			// $task = new \HM\Backdrop\Task( array( $this, 'after_submission' ), $entry, $form );
+			// $task->schedule();
+			$this->after_submission( $entry, $form );
+		}
+
+		/**
+		 * Returns an array of Gform sub-field ids, like checkbox choices for example
+		 * Example:
+		 * Array
+		 * (
+		 *     [22] => 4.1
+		 *     [28] => 4.2
+		 *     [29] => 4.3
+		 * )
+		 * @param  object $entry Gfrom entry
+		 * @param  object $field Gform field
+		 * @return array        List of sub field ids
+		 */
+		public function get_split_field_ids_from_entry( $entry, $field ) {
+
+			$pattern = "/" . $field->id . "\.*/";
+			return preg_grep($pattern, array_keys($entry));
+		}
+
+		/**
+		 * Returns a field value from a Gravity Form entry object
+		 * @param  object $entry GForm entry
+		 * @param  object $field Gform field
+		 * @return string        A Gform field value
+		 */
+		public function get_field_value( $entry, $field ) {
+
+			$sub_fields = $this->get_split_field_ids_from_entry($entry, $field);
+			if ( 0 < count( $sub_fields ) ) {
+				$values = array();
+				foreach ( $sub_fields as $f ) {
+					if ( empty( $entry[$f] ) ) continue;
+					$values[] = strip_tags( $entry[$f] );
+				}
+				$value = implode(', ', $values);
+			} else {
+				$value = $entry[$field->id];
+			}
+			return $value;;
 		}
 
 		public function after_submission( $entry, $form ) {
@@ -424,6 +465,7 @@ if ( class_exists('GFForms' ) ) :
 			foreach ( $form['fields'] as $field ) {
 
 				$solve_field = $field->field_solve;
+				$field_val 	= $this->get_field_value( $entry, $field );
 
 				if ( $field->type == 'name' ) { // auto configure name fields
 
@@ -431,9 +473,9 @@ if ( class_exists('GFForms' ) ) :
 						$contact_data['firstname'] = $entry[$field->id . '.3'];
 						$contact_data['lastname'] = $entry[$field->id . '.6'];
 					} else if ( trim( $solve_field ) == 'firstname' ) {
-						$contact_data['firstname'] = $entry[$field->id];
+						$contact_data['firstname'] = $field_val;
 					} else if ( trim( $solve_field ) == 'lastname' ) {
-						$contact_data['lastname'] = $entry[$field->id];
+						$contact_data['lastname'] = $field_val;
 					}
 
 				} else if ( ! empty( $solve_field) ) { // if solve field has input
@@ -453,41 +495,41 @@ if ( class_exists('GFForms' ) ) :
 
 							$condition_vals = explode( '=', $condition );
 							$field_condition = explode( '_', $condition_vals[0] );
-							$field_id = isset( $field_condition[1] ) ? $field_condition[1] : '';
-							$field_val = isset( $condition_vals[1] ) ? $condition_vals[1] : '';
+							$conditinal_field_id = isset( $field_condition[1] ) ? $field_condition[1] : '';
+							$conditional_field_val = isset( $condition_vals[1] ) ? $condition_vals[1] : '';
 
-							if ( $type == 'category' && isset( $entry[$field_id] ) && isset( $entry[$field->id] ) && $entry[$field_id] == $field_val ) {
-								$categories[] = (int) $entry[$field->id];
+							if ( $type == 'category' && isset( $entry[$conditinal_field_id] ) && isset( $field_val ) && $entry[$conditinal_field_id] == $conditional_field_val ) {
+								$categories[] = (int) $field_val;
 							}
 
 						} else if ( false === strpos( $condition, '!' ) ) { // truthy condition
 							if ( 'contact_exists' == trim( $condition ) ) { // if contact exists
-								$categories_ifcontact[] = $entry[$field->id];
+								$categories_ifcontact[] = $field_val;
 							}
 							if ( (int) $condition != 0 ) { // if condition is an integer, it's assumed to be a category tag ID. Add value as category if category exists
-								$categories_ifcat[(int) $condition] = (int) $entry[$field->id];
+								$categories_ifcat[(int) $condition] = (int) $field_val;
 							}
 
 						} else { // falsy condition
 							$condition = str_replace( '!', '', trim( $condition ) ); // strip explamation
 							if ( 'contact_exists' == $condition ) { // if contact doesn't exist
-								$categories_ifnocontact[] = $entry[$field->id];
+								$categories_ifnocontact[] = $$field_val;
 							}
 							if ( (int) $condition != 0 ) { // if solve field input contains an integer, assumed to be a category tag ID.
-								$categories_ifnocat[(int) $condition] = $entry[$field->id];
+								$categories_ifnocat[(int) $condition] = $field_val;
 							}
 						}
 
 					} else if ( 'category' == trim( $solve_field ) ) { // post value of this field as category
 
-						$categories[] = (int) $entry[$field->id];
+						$categories[] = (int) $field_val;
 
 					} else if ( false !== strpos( $solve_field, 'note' ) ) {
 
 						$note = explode( ':', $solve_field );
 						if ( 1 < count( $note ) ) {
 
-							$notes[]['details'] = $note[1] . ': ' . nl2br( $entry[$field->id] );
+							$notes[]['details'] = $note[1] . ': ' . nl2br( $field_val );
 						}
 
 					} else if ( false !== strpos( $solve_field, 'website' ) ) {
@@ -495,7 +537,7 @@ if ( class_exists('GFForms' ) ) :
 						$website = explode( ':', $solve_field );
 						if ( 1 < count( $website ) ) {
 
-							$websites[] = array( 'caption' => $website[1], 'url' => $entry[$field->id] );
+							$websites[] = array( 'caption' => $website[1], 'url' => $field_val );
 						}
 					} else {
 
@@ -504,7 +546,7 @@ if ( class_exists('GFForms' ) ) :
 						 * Go to My Account > API Reference > Contact > Fields for a list
 						 * @todo  validate input
 						 */
-						$contact_data[$solve_field] = $entry[$field->id];
+						$contact_data[$solve_field] = $field_val;
 
 					}
 				}
