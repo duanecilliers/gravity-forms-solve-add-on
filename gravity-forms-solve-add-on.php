@@ -414,7 +414,7 @@ if ( class_exists('GFForms' ) ) :
 		 * @param  object $field Gform field
 		 * @return string        A Gform field value
 		 */
-		public function get_field_value( $entry, $field ) {
+		public function get_form_field_value( $entry, $field ) {
 
 			$sub_fields = $this->get_split_field_ids_from_entry($entry, $field);
 			if ( 0 < count( $sub_fields ) ) {
@@ -465,7 +465,7 @@ if ( class_exists('GFForms' ) ) :
 			foreach ( $form['fields'] as $field ) {
 
 				$solve_field = $field->field_solve;
-				$field_val 	= $this->get_field_value( $entry, $field );
+				$field_val 	= $this->get_form_field_value( $entry, $field );
 
 				if ( $field->type == 'name' ) { // auto configure name fields
 
