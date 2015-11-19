@@ -513,7 +513,7 @@ if ( class_exists('GFForms' ) ) :
 						} else { // falsy condition
 							$condition = str_replace( '!', '', trim( $condition ) ); // strip explamation
 							if ( 'contact_exists' == $condition ) { // if contact doesn't exist
-								$categories_ifnocontact[] = $$field_val;
+								$categories_ifnocontact[] = $field_val;
 							}
 							if ( (int) $condition != 0 ) { // if solve field input contains an integer, assumed to be a category tag ID.
 								$categories_ifnocat[(int) $condition] = $field_val;
